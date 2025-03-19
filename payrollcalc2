@@ -1,0 +1,56 @@
+import streamlit as st
+
+# Tax rates and deduction percentages (modify as needed)
+CPP_RATE = 0.0595  # 5.95%
+EI_RATE = 0.0163   # 1.63%
+FEDERAL_TAX_RATE = 0.15  # Placeholder rate
+ONTARIO_TAX_RATE = 0.0505  # Placeholder rate
+
+# Basic exemption amounts
+CPP_EXEMPTION = 3500  # Yearly exemption before CPP applies
+EI_MAX_INSURABLE = 61500  # Max insurable earnings for EI
+
+
+def calculate_cpp(gross_pay, yearly_gross):
+    """Calculates CPP deduction considering the basic exemption."""
+    if yearly_gross <= CPP_EXEMPTION:
+        return 0
+    return gross_pay * CPP_RATE
+
+
+def calculate_ei(gross_pay):
+    """Calculates EI deduction up to the max insurable earnings."""
+    return min(gross_pay, EI_MAX_INSURABLE) * EI_RATE
+
+
+def calculate_tax(gross_pay):
+    """Calculates federal and provincial income tax."""
+    federal_tax = gross_pay * FEDERAL_TAX_RATE
+    ontario_tax = gross_pay * ONTARIO_TAX_RATE
+    return federal_tax, ontario_tax
+
+
+def calculate_net_pay(gross_pay, yearly_gross):
+    """Calculates net pay after deductions."""
+    cpp = calculate_cpp(gross_pay, yearly_gross)
+    ei = calculate_ei(gross_pay)
+    federal_tax, ontario_tax = calculate_tax(gross_pay)
+    total_deductions = cpp + ei + federal_tax + ontario_tax
+    net_pay = gross_pay - total_deductions
+    return net_pay, cpp, ei, federal_tax, ontario_tax
+
+# Streamlit Web App
+st.title("Payroll Calculator")
+
+gross_pay = st.number_input("Enter Gross Pay ($)", min_value=0.0, step=0.01)
+yearly_gross = st.number_input("Enter Yearly Gross Pay ($)", min_value=0.0, step=0.01)
+
+if st.button("Calculate Net Pay"):
+    net_pay, cpp, ei, fed_tax, ont_tax = calculate_net_pay(gross_pay, yearly_gross)
+    st.write("### Payroll Breakdown")
+    st.write(f"**Gross Pay:** ${gross_pay:.2f}")
+    st.write(f"**CPP Deduction:** ${cpp:.2f}")
+    st.write(f"**EI Deduction:** ${ei:.2f}")
+    st.write(f"**Federal Tax:** ${fed_tax:.2f}")
+    st.write(f"**Ontario Tax:** ${ont_tax:.2f}")
+    st.write(f"**Net Pay:** ${net_pay:.2f}")
