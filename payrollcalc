@@ -1,0 +1,72 @@
+import streamlit as st
+import pandas as pd
+
+# Tax rates and deduction percentages (modify as needed)
+CPP_RATE = 0.0595  # 5.95%
+EI_RATE = 0.0163   # 1.63%
+FEDERAL_TAX_RATE = 0.15  # Placeholder rate
+ONTARIO_TAX_RATE = 0.0505  # Placeholder rate
+
+# Basic exemption amounts
+CPP_EXEMPTION = 3500  # Yearly exemption before CPP applies
+EI_MAX_INSURABLE = 61500  # Max insurable earnings for EI
+
+
+def calculate_cpp(gross_pay, yearly_gross):
+    """Calculates CPP deduction considering the basic exemption."""
+    if yearly_gross <= CPP_EXEMPTION:
+        return 0
+    return gross_pay * CPP_RATE
+
+
+def calculate_ei(gross_pay):
+    """Calculates EI deduction up to the max insurable earnings."""
+    return min(gross_pay, EI_MAX_INSURABLE) * EI_RATE
+
+
+def calculate_tax(gross_pay):
+    """Calculates federal and provincial income tax."""
+    federal_tax = gross_pay * FEDERAL_TAX_RATE
+    ontario_tax = gross_pay * ONTARIO_TAX_RATE
+    return federal_tax, ontario_tax
+
+
+def calculate_net_pay(gross_pay, yearly_gross):
+    """Calculates net pay after deductions."""
+    cpp = calculate_cpp(gross_pay, yearly_gross)
+    ei = calculate_ei(gross_pay)
+    federal_tax, ontario_tax = calculate_tax(gross_pay)
+    total_deductions = cpp + ei + federal_tax + ontario_tax
+    net_pay = gross_pay - total_deductions
+    return net_pay, cpp, ei, federal_tax, ontario_tax
+
+# Streamlit Web App
+st.title("Payroll Calculator")
+
+uploaded_file = st.file_uploader("Upload Payroll CSV", type=["csv"])
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    results = []
+    
+    for _, row in df.iterrows():
+        name = row['Name']
+        gross_pay = float(row['Gross Pay'])
+        yearly_gross = float(row['Yearly Gross'])
+        net_pay, cpp, ei, fed_tax, ont_tax = calculate_net_pay(gross_pay, yearly_gross)
+        results.append({
+            "Name": name,
+            "Gross Pay": f"${gross_pay:.2f}",
+            "CPP": f"${cpp:.2f}",
+            "EI": f"${ei:.2f}",
+            "Federal Tax": f"${fed_tax:.2f}",
+            "Ontario Tax": f"${ont_tax:.2f}",
+            "Net Pay": f"${net_pay:.2f}"
+        })
+    
+    results_df = pd.DataFrame(results)
+    st.write("### Payroll Summary")
+    st.dataframe(results_df)
+    
+    csv_output = results_df.to_csv(index=False).encode('utf-8')
+    st.download_button("Download Payroll Report", csv_output, "payroll_report.csv", "text/csv")
